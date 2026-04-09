@@ -623,7 +623,7 @@
 </div>
 
 <footer>
-  CoachNote uses your own Claude API key. Your game data is sent directly to Anthropic and never stored. Free to use.
+  CoachNote uses your own Claude API key. Game data is sent directly to Anthropic and never stored on our servers. Free to use. <a href="https://github.com/Android-Tipster/coachnote" target="_blank" style="color:var(--green);">Open source on GitHub</a>
 </footer>
 
 <script>
@@ -699,45 +699,99 @@
     showState('loading');
 
     let result;
-    let scoreText = '';
+
+    // Build the user prompt
+    let scoreStr = '';
     if (ourScore && theirScore) {
       const us = parseInt(ourScore), them = parseInt(theirScore);
       if (!isNaN(us) && !isNaN(them)) {
         const outcome = us > them ? 'won' : us < them ? 'lost' : 'tied';
-        scoreText = ` They ${outcome} ${ourScore}-${theirScore}${opponent ? ' against ' + opponent : ''}.`;
+        scoreStr = `Result: ${outcome} ${ourScore}-${theirScore}${opponent ? ' against ' + opponent : ''}`;
       }
     }
 
+    const userPrompt = [
+      `Sport: ${sport}`,
+      `Team: ${team}`,
+      scoreStr || (ourScore || theirScore ? `Score: ${ourScore}-${theirScore}${opponent ? ' vs ' + opponent : ''}` : ''),
+      `What went well: ${wentWell}`,
+      `Areas to work on: ${workOn}`,
+      potg ? `Player of the game: ${potg}` : '',
+      nextEvent ? `Next event: ${nextEvent}` : '',
+      `Message tone: ${tone}`,
+    ].filter(Boolean).join('\n');
+
+    const systemPrompt = `You are CoachNote, an AI assistant that helps youth sports coaches.
+You write two outputs: a parent communication message and a structured practice plan.
+
+Rules for PARENT MESSAGE:
+- Warm, positive, brief (3-5 short paragraphs max)
+- Start with the result (win/loss/tie) and acknowledge the effort
+- Mention 2-3 specific highlights naturally (not as a bulleted list)
+- Include ONE constructive growth area framed positively
+- Mention player of the game if provided
+- End with logistics (next practice/game) if provided
+- Sign off as "Coach" (not the user's name - they can edit that)
+- NO em dashes. Use commas or periods only.
+- NO bullet points. Flowing prose paragraphs.
+- Conversational parent-to-parent tone, not corporate.
+
+Rules for PRACTICE PLAN:
+- 60-minute session structured in clear blocks
+- DIRECTLY target the weak areas mentioned in the input
+- Format each block as: BLOCK NAME (X min): [description and coaching cue]
+- Include: Warm-Up, 2 Skill Blocks targeting the weaknesses, Small-Sided Game, Cool-Down
+- Keep language practical, not academic
+- Age-appropriate language (assume U8-U14 unless specified)
+- NO em dashes anywhere.
+
+Return ONLY valid JSON with keys "parent_message" and "practice_plan". No markdown fences, no extra keys.`;
+
     try {
-      const response = await fetch('/api/generate', {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          sport, team, our_score: ourScore, their_score: theirScore,
-          opponent, went_well: wentWell, work_on: workOn,
-          potg, next_event: nextEvent, tone
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 1200,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }]
         })
       });
 
-      const data = await response.json();
+      const raw = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || `Error ${response.status}`);
+        const errMsg = raw?.error?.message || `Error ${response.status}`;
+        throw new Error(errMsg);
       }
 
-      result = data;
+      let text = raw.content?.[0]?.text?.trim() || '';
+      // Strip markdown fences if present
+      if (text.startsWith('```')) {
+        const lines = text.split('\n');
+        text = lines.slice(1, lines[lines.length-1].trim() === '```' ? -1 : undefined).join('\n');
+      }
+      try {
+        result = JSON.parse(text);
+      } catch {
+        // Try to extract JSON object
+        const start = text.indexOf('{'), end = text.lastIndexOf('}') + 1;
+        if (start !== -1 && end > start) result = JSON.parse(text.slice(start, end));
+        else throw new Error('Could not parse Claude response. Try again.');
+      }
     } catch (err) {
       showState('error');
       const msg = err.message || 'Unknown error';
-      if (msg.includes('401') || msg.includes('Authentication')) {
+      if (msg.includes('401') || msg.toLowerCase().includes('auth')) {
         document.getElementById('error-msg').textContent = 'API key invalid or expired. Check your key at console.anthropic.com.';
-      } else if (msg.includes('429') || msg.includes('rate')) {
+      } else if (msg.includes('429') || msg.toLowerCase().includes('rate')) {
         document.getElementById('error-msg').textContent = 'Rate limit hit. Wait a minute and try again.';
-      } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-        document.getElementById('error-msg').textContent = 'Network error. Make sure the app is running (Vercel or local dev server).';
       } else {
         document.getElementById('error-msg').textContent = msg;
       }
