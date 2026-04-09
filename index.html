@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CoachNote - AI Post-Game Recaps for Youth Sports Coaches</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #1a7a3b;
+    --green-light: #2da055;
+    --green-bg: #f0faf4;
+    --orange: #e86b1f;
+    --orange-light: #f5832a;
+    --gray: #5a6472;
+    --light: #f8f9fb;
+    --border: #d1d8e0;
+    --text: #1a2332;
+    --radius: 10px;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--light);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--green);
+    color: white;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--orange);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .tagline-header {
+    font-size: 0.82rem;
+    opacity: 0.82;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, var(--green) 0%, #145c2e 100%);
+    color: white;
+    text-align: center;
+    padding: 52px 24px 40px;
+  }
+
+  .hero h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+  }
+
+  .hero h1 span { color: #ffd166; }
+
+  .hero p {
+    font-size: 1.05rem;
+    opacity: 0.88;
+    max-width: 520px;
+    margin: 0 auto 28px;
+    line-height: 1.5;
+  }
+
+  .hero-badges {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  .main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+
+  /* Two column layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 700px) {
+    .layout { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 1.6rem; }
+  }
+
+  .card {
+    background: white;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 24px;
+  }
+
+  .card h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--gray);
+    margin-bottom: 6px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px 12px;
+    font-size: 0.9rem;
+    color: var(--text);
+    background: white;
+    transition: border-color 0.15s;
+    font-family: inherit;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(26,122,59,0.1);
+  }
+
+  textarea { resize: vertical; min-height: 80px; }
+
+  .score-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .tone-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .api-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .api-row input { flex: 1; }
+
+  .api-link {
+    font-size: 0.78rem;
+    color: var(--green);
+    text-decoration: none;
+    margin-top: 4px;
+    display: inline-block;
+  }
+
+  .generate-btn {
+    width: 100%;
+    background: var(--orange);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .generate-btn:hover { background: var(--orange-light); transform: translateY(-1px); }
+  .generate-btn:active { transform: translateY(0); }
+  .generate-btn:disabled { background: #aaa; cursor: not-allowed; transform: none; }
+
+  /* Output panel */
+  .output-panel { display: none; }
+  .output-panel.visible { display: block; }
+
+  .output-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0;
+  }
+
+  .tab-btn {
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--gray);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s;
+  }
+
+  .tab-btn.active {
+    color: var(--green);
+    border-bottom-color: var(--green);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .output-box {
+    background: var(--green-bg);
+    border: 1px solid #c3e8cf;
+    border-radius: 8px;
+    padding: 18px;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    font-family: inherit;
+    min-height: 200px;
+    max-height: 420px;
+    overflow-y: auto;
+  }
+
+  .practice-box {
+    background: #fff9f0;
+    border-color: #f0d4a8;
+  }
+
+  .output-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    padding: 8px 16px;
+    border-radius: 7px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: white;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+
+  .action-btn:hover { border-color: var(--green); color: var(--green); }
+
+  .action-btn.primary {
+    background: var(--green);
+    color: white;
+    border-color: var(--green);
+  }
+
+  .action-btn.primary:hover { background: var(--green-light); border-color: var(--green-light); }
+
+  .loading {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--gray);
+  }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto 14px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-box {
+    background: #fff0f0;
+    border: 1px solid #f8c4c4;
+    color: #c0392b;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 0.88rem;
+  }
+
+  .how-it-works {
+    margin-top: 40px;
+    text-align: center;
+  }
+
+  .how-it-works h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  @media (max-width: 600px) { .steps { grid-template-columns: 1fr; } }
+
+  .step {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 16px;
+    text-align: center;
+  }
+
+  .step-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+  }
+
+  .step h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .step p {
+    font-size: 0.85rem;
+    color: var(--gray);
+    line-height: 1.5;
+  }
+
+  .settings-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .settings-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .chevron { transition: transform 0.2s; }
+  .chevron.open { transform: rotate(180deg); }
+
+  .settings-content { display: none; }
+  .settings-content.open { display: block; }
+
+  .key-saved {
+    font-size: 0.8rem;
+    color: var(--green);
+    margin-top: 4px;
+  }
+
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 0.82rem;
+    color: var(--gray);
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">C</div>
+    CoachNote
+  </div>
+  <span class="tagline-header">AI recaps for youth sports coaches</span>
+</header>
+
+<div class="hero">
+  <h1>From final whistle to <span>parent inbox</span> in 60 seconds</h1>
+  <p>Describe the game. CoachNote writes your parent update and next practice plan automatically.</p>
+  <div class="hero-badges">
+    <span class="badge">Any sport</span>
+    <span class="badge">Any age group</span>
+    <span class="badge">BYOK - free to use</span>
+    <span class="badge">PDF download</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="layout">
+
+    <!-- LEFT: Input form -->
+    <div>
+      <div class="card">
+        <h2>Game Details</h2>
+
+        <div class="form-group">
+          <label>Sport</label>
+          <select id="sport">
+            <option value="soccer">Soccer</option>
+            <option value="basketball">Basketball</option>
+            <option value="baseball">Baseball</option>
+            <option value="softball">Softball</option>
+            <option value="volleyball">Volleyball</option>
+            <option value="flag football">Flag Football</option>
+            <option value="lacrosse">Lacrosse</option>
+            <option value="hockey">Hockey</option>
+            <option value="tennis">Tennis</option>
+            <option value="swim meet">Swim Meet</option>
+            <option value="track and field">Track & Field</option>
+            <option value="wrestling">Wrestling</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Team Name & Age Group</label>
+          <input type="text" id="team" placeholder="e.g. Thunder Hawks U10 Girls" />
+        </div>
+
+        <div class="score-row">
+          <div class="form-group">
+            <label>Your Score</label>
+            <input type="text" id="our_score" placeholder="e.g. 3" />
+          </div>
+          <div class="form-group">
+            <label>Opponent Score</label>
+            <input type="text" id="their_score" placeholder="e.g. 1" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Opponent (optional)</label>
+          <input type="text" id="opponent" placeholder="e.g. Blue Lightning FC" />
+        </div>
+
+        <div class="form-group">
+          <label>What went well? (bullet points or sentences)</label>
+          <textarea id="went_well" placeholder="e.g. Strong defensive pressure in the 2nd half. Emma's two goals. Team communicated really well on set pieces."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Areas to work on</label>
+          <textarea id="work_on" placeholder="e.g. Transition from defense to attack was slow. Need more shooting practice." style="min-height:65px;"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Player of the Game (optional)</label>
+          <input type="text" id="potg" placeholder="e.g. Marcus - never stopped running" />
+        </div>
+
+        <div class="form-group">
+          <label>Next practice / game info (optional)</label>
+          <input type="text" id="next_event" placeholder="e.g. Practice Tuesday 6pm at Riverside Park" />
+        </div>
+
+        <div class="form-group">
+          <label>Message tone</label>
+          <div class="tone-row">
+            <select id="tone">
+              <option value="warm and encouraging">Warm & Encouraging</option>
+              <option value="upbeat and energetic">Upbeat & Energetic</option>
+              <option value="calm and reflective">Calm & Reflective</option>
+              <option value="brief and direct">Brief & Direct</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-title" onclick="toggleSettings()">
+            API Settings <span class="chevron" id="chevron">&#x25BE;</span>
+          </div>
+          <div class="settings-content" id="settings-content">
+            <div class="form-group">
+              <label>Anthropic API Key</label>
+              <div class="api-row">
+                <input type="password" id="api_key" placeholder="sk-ant-..." />
+                <button class="action-btn" onclick="saveKey()">Save</button>
+              </div>
+              <a href="https://console.anthropic.com/settings/keys" target="_blank" class="api-link">Get a free API key at console.anthropic.com</a>
+              <div class="key-saved" id="key-saved" style="display:none">Key saved locally</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="generate-btn" id="generate-btn" onclick="generate()">
+          <span>Generate Game Recap + Practice Plan</span>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- RIGHT: Output -->
+    <div id="output-section">
+
+      <div id="placeholder-card" class="card" style="text-align:center; padding: 40px 20px; color: var(--gray);">
+        <div style="font-size:3rem; margin-bottom:16px;">C</div>
+        <div style="font-weight:700; font-size:1rem; margin-bottom:8px; color:var(--text);">Your recap will appear here</div>
+        <div style="font-size:0.88rem; line-height:1.6;">Fill in the game details on the left, then hit <strong>Generate</strong> to get your parent message and practice plan instantly.</div>
+        <div style="margin-top:24px; display:flex; flex-direction:column; gap:10px;">
+          <div style="background:var(--green-bg); border-radius:8px; padding:12px; font-size:0.84rem; text-align:left; border:1px solid #c3e8cf;">
+            <strong>Parent email</strong><br/>A warm, positive message about the game result with highlights and next steps.
+          </div>
+          <div style="background:#fff9f0; border-radius:8px; padding:12px; font-size:0.84rem; text-align:left; border:1px solid #f0d4a8;">
+            <strong>Practice plan</strong><br/>A 60-minute session targeting exactly what your team needs to work on next.
+          </div>
+        </div>
+      </div>
+
+      <div id="loading-card" class="card" style="display:none;">
+        <div class="loading">
+          <div class="spinner"></div>
+          <div style="font-weight:600;">Generating your recap...</div>
+          <div style="font-size:0.84rem; margin-top:6px;">This takes about 10 seconds</div>
+        </div>
+      </div>
+
+      <div id="result-card" class="card" style="display:none;">
+        <div class="output-tabs">
+          <button class="tab-btn active" onclick="switchTab('parent')" id="tab-parent">Parent Message</button>
+          <button class="tab-btn" onclick="switchTab('practice')" id="tab-practice">Practice Plan</button>
+        </div>
+
+        <div id="content-parent" class="tab-content active">
+          <div class="output-box" id="parent-output"></div>
+          <div class="output-actions">
+            <button class="action-btn primary" onclick="copyText('parent')">Copy Message</button>
+            <button class="action-btn" onclick="downloadPDF('parent')">Download PDF</button>
+          </div>
+        </div>
+
+        <div id="content-practice" class="tab-content">
+          <div class="output-box practice-box" id="practice-output"></div>
+          <div class="output-actions">
+            <button class="action-btn primary" onclick="copyText('practice')">Copy Plan</button>
+            <button class="action-btn" onclick="downloadPDF('practice')">Download PDF</button>
+            <button class="action-btn" onclick="downloadPDF('both')">Download Both</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="error-card" class="card" style="display:none;">
+        <div class="error-box" id="error-msg"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div class="how-it-works">
+    <h2>How CoachNote works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-icon">C</div>
+        <h3>Fill in the game</h3>
+        <p>Enter the score, what went well, and what your team needs to work on. Takes under 2 minutes.</p>
+      </div>
+      <div class="step">
+        <div class="step-icon">A</div>
+        <h3>AI generates two outputs</h3>
+        <p>A parent-ready message about the game, and a complete 60-minute practice plan targeting the weaknesses you saw.</p>
+      </div>
+      <div class="step">
+        <div class="step-icon">S</div>
+        <h3>Copy, send, print</h3>
+        <p>Copy the parent message to your team app (TeamSnap, Band, GroupMe) and print the practice plan for your session.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  CoachNote uses your own Claude API key. Your game data is sent directly to Anthropic and never stored. Free to use.
+</footer>
+
+<script>
+  // Restore saved API key
+  window.addEventListener('DOMContentLoaded', () => {
+    const saved = localStorage.getItem('coachnote_api_key');
+    if (saved) {
+      document.getElementById('api_key').value = saved;
+      document.getElementById('key-saved').style.display = 'block';
+    }
+  });
+
+  function toggleSettings() {
+    const content = document.getElementById('settings-content');
+    const chevron = document.getElementById('chevron');
+    content.classList.toggle('open');
+    chevron.classList.toggle('open');
+  }
+
+  function saveKey() {
+    const key = document.getElementById('api_key').value.trim();
+    if (key) {
+      localStorage.setItem('coachnote_api_key', key);
+      document.getElementById('key-saved').style.display = 'block';
+    }
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.getElementById('content-' + tab).classList.add('active');
+  }
+
+  function showState(state) {
+    document.getElementById('placeholder-card').style.display = state === 'placeholder' ? '' : 'none';
+    document.getElementById('loading-card').style.display = state === 'loading' ? '' : 'none';
+    document.getElementById('result-card').style.display = state === 'result' ? '' : 'none';
+    document.getElementById('error-card').style.display = state === 'error' ? '' : 'none';
+  }
+
+  async function generate() {
+    const apiKey = document.getElementById('api_key').value.trim();
+    if (!apiKey) {
+      // Open settings if key not set
+      document.getElementById('settings-content').classList.add('open');
+      document.getElementById('chevron').classList.add('open');
+      document.getElementById('api_key').focus();
+      showState('error');
+      document.getElementById('error-msg').textContent = 'Please enter your Anthropic API key in the settings section below the form.';
+      return;
+    }
+
+    const sport = document.getElementById('sport').value;
+    const team = document.getElementById('team').value.trim() || 'the team';
+    const ourScore = document.getElementById('our_score').value.trim();
+    const theirScore = document.getElementById('their_score').value.trim();
+    const opponent = document.getElementById('opponent').value.trim();
+    const wentWell = document.getElementById('went_well').value.trim();
+    const workOn = document.getElementById('work_on').value.trim();
+    const potg = document.getElementById('potg').value.trim();
+    const nextEvent = document.getElementById('next_event').value.trim();
+    const tone = document.getElementById('tone').value;
+
+    if (!wentWell || !workOn) {
+      showState('error');
+      document.getElementById('error-msg').textContent = 'Please fill in what went well and areas to work on.';
+      return;
+    }
+
+    const btn = document.getElementById('generate-btn');
+    btn.disabled = true;
+    showState('loading');
+
+    let result;
+    let scoreText = '';
+    if (ourScore && theirScore) {
+      const us = parseInt(ourScore), them = parseInt(theirScore);
+      if (!isNaN(us) && !isNaN(them)) {
+        const outcome = us > them ? 'won' : us < them ? 'lost' : 'tied';
+        scoreText = ` They ${outcome} ${ourScore}-${theirScore}${opponent ? ' against ' + opponent : ''}.`;
+      }
+    }
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey
+        },
+        body: JSON.stringify({
+          sport, team, our_score: ourScore, their_score: theirScore,
+          opponent, went_well: wentWell, work_on: workOn,
+          potg, next_event: nextEvent, tone
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Error ${response.status}`);
+      }
+
+      result = data;
+    } catch (err) {
+      showState('error');
+      const msg = err.message || 'Unknown error';
+      if (msg.includes('401') || msg.includes('Authentication')) {
+        document.getElementById('error-msg').textContent = 'API key invalid or expired. Check your key at console.anthropic.com.';
+      } else if (msg.includes('429') || msg.includes('rate')) {
+        document.getElementById('error-msg').textContent = 'Rate limit hit. Wait a minute and try again.';
+      } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        document.getElementById('error-msg').textContent = 'Network error. Make sure the app is running (Vercel or local dev server).';
+      } else {
+        document.getElementById('error-msg').textContent = msg;
+      }
+      btn.disabled = false;
+      return;
+    }
+
+    document.getElementById('parent-output').textContent = result.parent_message;
+    document.getElementById('practice-output').textContent = result.practice_plan;
+
+    window._lastResult = result;
+    window._lastTeam = team;
+    window._lastSport = sport;
+
+    showState('result');
+    switchTab('parent');
+    btn.disabled = false;
+  }
+
+  function copyText(which) {
+    const text = which === 'parent'
+      ? document.getElementById('parent-output').textContent
+      : document.getElementById('practice-output').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target;
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 1800);
+    });
+  }
+
+  function downloadPDF(which) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+    const team = window._lastTeam || 'CoachNote';
+    const sport = window._lastSport || 'game';
+
+    function addPage(title, content) {
+      const lines = doc.splitTextToSize(content, 175);
+      let y = 30;
+
+      // Header bar
+      doc.setFillColor(26, 122, 59);
+      doc.rect(0, 0, 210, 18, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CoachNote', 10, 12);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text('coachnote.vercel.app', 150, 12);
+
+      // Title
+      doc.setTextColor(26, 122, 59);
+      doc.setFontSize(15);
+      doc.setFont('helvetica', 'bold');
+      doc.text(title, 15, y);
+      y += 5;
+
+      doc.setTextColor(90, 100, 114);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(team + ' - ' + new Date().toLocaleDateString(), 15, y);
+      y += 8;
+
+      doc.setDrawColor(200, 220, 200);
+      doc.line(15, y, 195, y);
+      y += 8;
+
+      doc.setTextColor(26, 35, 50);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+
+      lines.forEach(line => {
+        if (y > 275) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(line, 15, y);
+        y += 5.5;
+      });
+    }
+
+    const r = window._lastResult;
+    if (which === 'parent') {
+      addPage('Parent Game Update', r.parent_message);
+    } else if (which === 'practice') {
+      addPage('Practice Plan', r.practice_plan);
+    } else {
+      addPage('Parent Game Update', r.parent_message);
+      doc.addPage();
+      addPage('Practice Plan', r.practice_plan);
+    }
+
+    const filename = `coachnote-${team.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(filename);
+  }
+</script>
+</body>
+</html>
